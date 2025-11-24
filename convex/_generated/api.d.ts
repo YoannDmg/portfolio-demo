@@ -8,13 +8,19 @@
  * @module
  */
 
+import type * as assets from "../assets.js";
+import type * as notifications from "../notifications.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  assets: typeof assets;
+  notifications: typeof notifications;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
