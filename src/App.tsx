@@ -14,6 +14,7 @@ import {
   TradingCard,
   HoldingsTable,
   TransactionHistory,
+  NotificationsCard,
   ErrorAlert,
 } from '@/components'
 
@@ -98,6 +99,9 @@ function App() {
 
         {/* Transaction history */}
         <TransactionHistory transactions={transactions} />
+
+        {/* Price alerts with AI analysis */}
+        <NotificationsCard />
       </div>
     </div>
   )

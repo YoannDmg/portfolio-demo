@@ -151,10 +151,14 @@ export function HoldingsTable({ assets, prices, onSellAll, loading }: HoldingsTa
                     {/* 24h Change */}
                     <TableCell className="text-right">
                       <Badge
-                        variant={change24h >= 0 ? 'default' : 'destructive'}
-                        className={change24h >= 0 ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''}
+                        className={`border ${
+                          change24h >= 0
+                            ? 'bg-green-100 text-green-800 border-green-200'
+                            : 'bg-red-100 text-red-800 border-red-200'
+                        }`}
                       >
-                        {change24h >= 0 ? '+' : ''}{change24h.toFixed(2)}%
+                        {change24h >= 0 ? '+' : ''}
+                        {change24h.toFixed(2)}%
                       </Badge>
                     </TableCell>
 

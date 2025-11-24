@@ -54,7 +54,7 @@ export function NotificationsPanel() {
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-96 p-0 rounded-xl border border-border/60 bg-white shadow-2xl dark:border-border/40 dark:bg-white"
+        className="w-96 p-0 rounded-xl border border-border/60 shadow-2xl"
         align="end"
       >
         {/* Header */}

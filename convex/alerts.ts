@@ -57,11 +57,23 @@ async function generateAIAnalysis(
   }
 
   const direction = type === 'price_up' ? 'increased' : 'decreased'
-  const prompt = `You are a crypto market analyst. Provide a brief (2-3 sentences max) analysis for this alert:
-${symbol} price has ${direction} by ${Math.abs(priceChange).toFixed(2)}% in the last 24 hours.
-Current price: $${currentPrice.toFixed(2)}
 
-Be concise, professional, and mention potential market factors. Do not give financial advice.`
+  const prompt = `
+    You are a crypto market analyst.
+
+    Provide a concise market insight (3–4 sentences) about the following price movement:
+    Asset: ${symbol}
+    24h Change: ${direction} by ${Math.abs(priceChange).toFixed(2)}%
+    Current Price: $${currentPrice.toFixed(2)}
+
+    Include:
+    - The likely catalysts behind the move
+    - How it compares to recent volatility
+    - What it suggests about short-term sentiment
+
+    Do NOT provide financial advice. Keep the tone analytical and factual.
+    `
+
 
   try {
     const response = await fetch(OPENROUTER_API, {
@@ -69,16 +81,20 @@ Be concise, professional, and mention potential market factors. Do not give fina
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://portfolio-demo.convex.site',
+        'X-Title': 'Crypto Portfolio Demo',
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.1-8b-instruct:free',
+        model: "mistralai/mistral-7b-instruct:free",
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 150,
+        max_tokens: 300,
       }),
     })
 
     if (!response.ok) {
-      throw new Error('OpenRouter API error')
+      const errorText = await response.text()
+      console.error('OpenRouter API error:', response.status, errorText)
+      throw new Error(`OpenRouter API error: ${response.status}`)
     }
 
     const data = await response.json()

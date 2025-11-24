@@ -15,7 +15,7 @@ const crons = cronJobs()
  */
 crons.interval(
   'check-price-alerts',
-  { minutes: 1 },
+  { minutes: 5 },
   internal.alerts.checkPriceAlerts
 )
 

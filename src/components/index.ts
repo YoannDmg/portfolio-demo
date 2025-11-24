@@ -4,10 +4,10 @@
  */
 
 export { Header } from './Header'
-export { NotificationsPanel } from './NotificationsPanel'
 export { SummaryCards } from './SummaryCards'
 export { WalletCard } from './WalletCard'
 export { TradingCard } from './TradingCard'
 export { HoldingsTable } from './HoldingsTable'
 export { TransactionHistory } from './TransactionHistory'
+export { NotificationsCard } from './NotificationsCard'
 export { ErrorAlert } from './ErrorAlert'
