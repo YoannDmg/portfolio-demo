@@ -22,6 +22,7 @@ type PriceData = {
 
 function App() {
   const assets = useQuery(api.assets.list)
+  const transactions = useQuery(api.transactions.listRecent, { limit: 20 })
   const addAsset = useMutation(api.assets.add)
   const removeAsset = useMutation(api.assets.remove)
   const get24hChanges = useAction(api.binance.get24hChanges)
@@ -325,6 +326,73 @@ function App() {
                             >
                               Remove
                             </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Transaction History */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Transaction History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {transactions === undefined ? (
+              <div className="flex justify-center py-8">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <p className="text-muted-foreground mb-2">No transactions yet</p>
+                <p className="text-sm text-muted-foreground">Your buy and sell history will appear here</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Asset</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead className="text-right">Price</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((tx) => {
+                      const total = tx.quantity * tx.price
+                      const date = new Date(tx.timestamp)
+
+                      return (
+                        <TableRow key={tx._id}>
+                          <TableCell>
+                            <div className="text-sm">{date.toLocaleDateString()}</div>
+                            <div className="text-xs text-muted-foreground">{date.toLocaleTimeString()}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={tx.type === 'buy' ? 'default' : 'destructive'}
+                              className={tx.type === 'buy' ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''}
+                            >
+                              {tx.type.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">{tx.symbol}</TableCell>
+                          <TableCell className="text-right font-mono">
+                            {tx.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            ${tx.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-medium">
+                            ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </TableCell>
                         </TableRow>
                       )

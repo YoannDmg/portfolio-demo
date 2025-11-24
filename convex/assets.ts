@@ -14,6 +14,7 @@ export const list = query({
 /**
  * Add a new asset to the portfolio
  * If the asset already exists, updates quantity and recalculates weighted average price
+ * Also records a buy transaction in history
  */
 export const add = mutation({
   args: {
@@ -22,6 +23,15 @@ export const add = mutation({
     avgBuyPrice: v.number(),
   },
   handler: async (ctx, args) => {
+    // Record the buy transaction
+    await ctx.db.insert('transactions', {
+      symbol: args.symbol,
+      type: 'buy',
+      quantity: args.quantity,
+      price: args.avgBuyPrice,
+      timestamp: Date.now(),
+    })
+
     const existing = await ctx.db
       .query('assets')
       .filter((q) => q.eq(q.field('symbol'), args.symbol))
