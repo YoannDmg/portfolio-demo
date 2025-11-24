@@ -8,8 +8,10 @@
  * @module
  */
 
+import type * as alerts from "../alerts.js";
 import type * as assets from "../assets.js";
 import type * as binance from "../binance.js";
+import type * as crons from "../crons.js";
 import type * as notifications from "../notifications.js";
 import type * as trading from "../trading.js";
 import type * as transactions from "../transactions.js";
@@ -22,8 +24,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  alerts: typeof alerts;
   assets: typeof assets;
   binance: typeof binance;
+  crons: typeof crons;
   notifications: typeof notifications;
   trading: typeof trading;
   transactions: typeof transactions;

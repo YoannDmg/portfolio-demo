@@ -4,6 +4,7 @@
  */
 
 export { Header } from './Header'
+export { NotificationsPanel } from './NotificationsPanel'
 export { SummaryCards } from './SummaryCards'
 export { WalletCard } from './WalletCard'
 export { TradingCard } from './TradingCard'

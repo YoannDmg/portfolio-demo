@@ -5,13 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -p tsconfig.app.json && vite build",
+    "typecheck": "tsc -p tsconfig.app.json && tsc -p convex/tsconfig.json",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.71",
     "@binance/connector": "^3.6.1",
+    "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.1.17",
     "ai": "^5.0.101",
