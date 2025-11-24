@@ -21,20 +21,26 @@ type PriceData = {
 }
 
 function App() {
+  const walletBalance = useQuery(api.wallet.getBalance)
   const assets = useQuery(api.assets.list)
   const transactions = useQuery(api.transactions.listRecent, { limit: 20 })
-  const addAsset = useMutation(api.assets.add)
-  const removeAsset = useMutation(api.assets.remove)
+
+  const deposit = useMutation(api.wallet.deposit)
+  const withdraw = useMutation(api.wallet.withdraw)
+  const buy = useMutation(api.trading.buy)
+  const sell = useMutation(api.trading.sell)
   const get24hChanges = useAction(api.binance.get24hChanges)
   const getPrice = useAction(api.binance.getPrice)
 
-  const [symbol, setSymbol] = useState('')
-  const [quantity, setQuantity] = useState('')
-  const [customPrice, setCustomPrice] = useState('')
-  const [useCustomPrice, setUseCustomPrice] = useState(false)
+  const [depositAmount, setDepositAmount] = useState('')
+  const [withdrawAmount, setWithdrawAmount] = useState('')
+  const [buySymbol, setBuySymbol] = useState('')
+  const [buyQuantity, setBuyQuantity] = useState('')
+  const [sellSymbol, setSellSymbol] = useState('')
+  const [sellQuantity, setSellQuantity] = useState('')
   const [prices, setPrices] = useState<Record<string, PriceData>>({})
   const [loadingPrices, setLoadingPrices] = useState(false)
-  const [addingAsset, setAddingAsset] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   // Fetch prices when assets change
@@ -51,8 +57,8 @@ function App() {
           priceMap[item.symbol] = item
         }
         setPrices(priceMap)
-      } catch (error) {
-        console.error('Failed to fetch prices:', error)
+      } catch (err) {
+        console.error('Failed to fetch prices:', err)
       } finally {
         setLoadingPrices(false)
       }
@@ -63,41 +69,82 @@ function App() {
     return () => clearInterval(interval)
   }, [assets, get24hChanges])
 
-  const handleAddAsset = async () => {
-    if (!symbol || !quantity) {
-      setError('Please enter symbol and quantity')
+  const handleDeposit = async () => {
+    if (!depositAmount) return
+    setLoading(true)
+    setError('')
+    try {
+      await deposit({ amount: parseFloat(depositAmount) })
+      setDepositAmount('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Deposit failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleWithdraw = async () => {
+    if (!withdrawAmount) return
+    setLoading(true)
+    setError('')
+    try {
+      await withdraw({ amount: parseFloat(withdrawAmount) })
+      setWithdrawAmount('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Withdrawal failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBuy = async () => {
+    if (!buySymbol || !buyQuantity) {
+      setError('Enter symbol and quantity')
       return
     }
-
-    setAddingAsset(true)
+    setLoading(true)
     setError('')
-
     try {
-      let buyPrice: number
-
-      if (useCustomPrice && customPrice) {
-        buyPrice = parseFloat(customPrice)
-      } else {
-        const priceData = await getPrice({ symbol: symbol.toUpperCase() })
-        buyPrice = priceData.price
-      }
-
-      await addAsset({
-        symbol: symbol.toUpperCase(),
-        quantity: parseFloat(quantity),
-        avgBuyPrice: buyPrice,
+      const priceData = await getPrice({ symbol: buySymbol.toUpperCase() })
+      await buy({
+        symbol: buySymbol.toUpperCase(),
+        quantity: parseFloat(buyQuantity),
+        price: priceData.price,
       })
-
-      setSymbol('')
-      setQuantity('')
-      setCustomPrice('')
-      setUseCustomPrice(false)
+      setBuySymbol('')
+      setBuyQuantity('')
     } catch (err) {
-      setError(`Failed to add asset. Check if "${symbol.toUpperCase()}" is a valid symbol.`)
-      console.error(err)
+      setError(err instanceof Error ? err.message : 'Buy failed')
     } finally {
-      setAddingAsset(false)
+      setLoading(false)
     }
+  }
+
+  const handleSell = async (symbol: string, quantity: number) => {
+    setLoading(true)
+    setError('')
+    try {
+      const priceData = await getPrice({ symbol })
+      await sell({
+        symbol,
+        quantity,
+        price: priceData.price,
+      })
+      setSellSymbol('')
+      setSellQuantity('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sell failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSellPartial = async () => {
+    if (!sellSymbol || !sellQuantity) {
+      setError('Enter symbol and quantity')
+      return
+    }
+    await handleSell(sellSymbol.toUpperCase(), parseFloat(sellQuantity))
   }
 
   // Calculate totals
@@ -113,6 +160,16 @@ function App() {
   const totalPnL = totalValue - totalCost
   const totalPnLPercent = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0
 
+  const getBadgeColor = (type: string) => {
+    switch (type) {
+      case 'deposit': return 'bg-blue-100 text-blue-800 hover:bg-blue-100'
+      case 'withdraw': return 'bg-orange-100 text-orange-800 hover:bg-orange-100'
+      case 'buy': return 'bg-green-100 text-green-800 hover:bg-green-100'
+      case 'sell': return 'bg-red-100 text-red-800 hover:bg-red-100'
+      default: return ''
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -126,8 +183,31 @@ function App() {
           )}
         </div>
 
-        {/* Portfolio Summary */}
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
+
+        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                USDT Balance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">
+                ${(walletBalance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Available for trading
+              </p>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -138,18 +218,8 @@ function App() {
               <p className="text-3xl font-bold">
                 ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Invested
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">
-                ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <p className="text-sm text-muted-foreground">
+                {assets?.length ?? 0} asset{(assets?.length ?? 0) !== 1 ? 's' : ''}
               </p>
             </CardContent>
           </Card>
@@ -157,7 +227,7 @@ function App() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Profit/Loss
+                Profit/Loss
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -171,77 +241,118 @@ function App() {
           </Card>
         </div>
 
-        {/* Add Asset Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Add Asset</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Deposit/Withdraw & Buy/Sell */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Deposit/Withdraw */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Deposit / Withdraw USDT</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Symbol</label>
-                <Input
-                  type="text"
-                  placeholder="BTC, ETH, SOL..."
-                  value={symbol}
-                  onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Quantity</label>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  step="any"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Buy Price</label>
-                  <label className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={useCustomPrice}
-                      onChange={(e) => setUseCustomPrice(e.target.checked)}
-                      className="rounded"
-                    />
-                    Custom
-                  </label>
+                <label className="text-sm font-medium">Add funds to your wallet</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button onClick={handleDeposit} disabled={loading} className="bg-blue-600 hover:bg-blue-700 w-24">
+                    Deposit
+                  </Button>
                 </div>
-                <Input
-                  type="number"
-                  placeholder={useCustomPrice ? "Enter price" : "Auto (current)"}
-                  step="any"
-                  value={customPrice}
-                  onChange={(e) => setCustomPrice(e.target.value)}
-                  disabled={!useCustomPrice}
-                />
               </div>
-
-              <div className="flex items-end">
-                <Button
-                  onClick={handleAddAsset}
-                  disabled={addingAsset}
-                  className="w-full"
-                >
-                  {addingAsset ? 'Adding...' : 'Add Asset'}
-                </Button>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Withdraw from wallet</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button variant="outline" onClick={handleWithdraw} disabled={loading} className="w-24">
+                    Withdraw
+                  </Button>
+                </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {error && (
-              <p className="text-sm text-red-600">{error}</p>
-            )}
-
-            <p className="text-xs text-muted-foreground">
-              Leave "Buy Price" unchecked to use the current market price from Binance.
-            </p>
-          </CardContent>
-        </Card>
+          {/* Buy/Sell */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Buy / Sell Crypto</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Buy crypto with USDT</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="BTC"
+                    value={buySymbol}
+                    onChange={(e) => setBuySymbol(e.target.value.toUpperCase())}
+                    className="w-20 shrink-0"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Amount"
+                    value={buyQuantity}
+                    onChange={(e) => setBuyQuantity(e.target.value)}
+                    className="min-w-0"
+                  />
+                  <Button onClick={handleBuy} disabled={loading} className="bg-green-600 hover:bg-green-700 shrink-0">
+                    Buy
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sell crypto for USDT</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="BTC"
+                    value={sellSymbol}
+                    onChange={(e) => setSellSymbol(e.target.value.toUpperCase())}
+                    className="w-20 shrink-0"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Amount"
+                    value={sellQuantity}
+                    onChange={(e) => setSellQuantity(e.target.value)}
+                    className="min-w-0"
+                  />
+                  <Button
+                    onClick={handleSellPartial}
+                    disabled={loading}
+                    className={`shrink-0 text-white ${
+                      sellSymbol &&
+                      sellQuantity &&
+                      parseFloat(sellQuantity) > 0 &&
+                      assets?.find(
+                        (a) =>
+                          a.symbol === sellSymbol.toUpperCase() &&
+                          a.quantity >= parseFloat(sellQuantity)
+                      )
+                        ? 'bg-red-600 hover:bg-red-700'
+                        : 'bg-red-300 hover:bg-red-400'
+                    }`}
+                  >
+                    Sell
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Market prices from Binance
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Assets Table */}
         <Card>
@@ -256,7 +367,7 @@ function App() {
             ) : assets.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <p className="text-muted-foreground mb-2">No assets in your portfolio</p>
-                <p className="text-sm text-muted-foreground">Add your first crypto asset above to get started</p>
+                <p className="text-sm text-muted-foreground">Deposit USDT and buy crypto to get started</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -321,10 +432,11 @@ function App() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeAsset({ id: asset._id })}
+                              onClick={() => handleSell(asset.symbol, asset.quantity)}
+                              disabled={loading}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              Remove
+                              Sell All
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -350,7 +462,7 @@ function App() {
             ) : transactions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <p className="text-muted-foreground mb-2">No transactions yet</p>
-                <p className="text-sm text-muted-foreground">Your buy and sell history will appear here</p>
+                <p className="text-sm text-muted-foreground">Your transaction history will appear here</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -367,7 +479,6 @@ function App() {
                   </TableHeader>
                   <TableBody>
                     {transactions.map((tx) => {
-                      const total = tx.quantity * tx.price
                       const date = new Date(tx.timestamp)
 
                       return (
@@ -377,22 +488,21 @@ function App() {
                             <div className="text-xs text-muted-foreground">{date.toLocaleTimeString()}</div>
                           </TableCell>
                           <TableCell>
-                            <Badge
-                              variant={tx.type === 'buy' ? 'default' : 'destructive'}
-                              className={tx.type === 'buy' ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''}
-                            >
+                            <Badge className={getBadgeColor(tx.type)}>
                               {tx.type.toUpperCase()}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-medium">{tx.symbol}</TableCell>
+                          <TableCell className="font-medium">
+                            {tx.symbol || 'USDT'}
+                          </TableCell>
                           <TableCell className="text-right font-mono">
                             {tx.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            ${tx.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {tx.price ? `$${tx.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
                           </TableCell>
                           <TableCell className="text-right font-mono font-medium">
-                            ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ${tx.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </TableCell>
                         </TableRow>
                       )

@@ -2,30 +2,41 @@ import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
 export default defineSchema({
-  // Actifs du portfolio (ex: 0.5 BTC, 2 ETH)
+  // Wallet balance (USDT as base currency)
+  wallet: defineTable({
+    balance: v.number(),
+  }),
+
+  // Crypto holdings
   assets: defineTable({
-    symbol: v.string(), // "BTC", "ETH", etc.
-    quantity: v.number(), // Quantité détenue
-    avgBuyPrice: v.number(), // Prix moyen d'achat en USD
-  }),
-
-  // Historique des transactions
-  transactions: defineTable({
     symbol: v.string(),
-    type: v.union(v.literal('buy'), v.literal('sell')),
     quantity: v.number(),
-    price: v.number(), // Prix unitaire au moment de la transaction
-    timestamp: v.number(), // Date de la transaction
+    avgBuyPrice: v.number(),
   }),
 
-  // Notifications d'alertes avec analyse IA
+  // Transaction history
+  transactions: defineTable({
+    type: v.union(
+      v.literal('deposit'),
+      v.literal('withdraw'),
+      v.literal('buy'),
+      v.literal('sell')
+    ),
+    symbol: v.optional(v.string()), // Only for buy/sell
+    quantity: v.number(), // USDT for deposit/withdraw, crypto for buy/sell
+    price: v.optional(v.number()), // Unit price for buy/sell
+    total: v.number(), // Total USDT value
+    timestamp: v.number(),
+  }),
+
+  // AI-generated alert notifications
   notifications: defineTable({
     symbol: v.string(),
     type: v.union(v.literal('price_up'), v.literal('price_down')),
-    priceChange: v.number(), // Variation en %
+    priceChange: v.number(),
     currentPrice: v.number(),
-    aiAnalysis: v.string(), // Commentaire généré par l'IA
+    aiAnalysis: v.string(),
     timestamp: v.number(),
-    read: v.boolean(), // Notification lue ou non
+    read: v.boolean(),
   }),
 })

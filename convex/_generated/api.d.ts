@@ -11,7 +11,9 @@
 import type * as assets from "../assets.js";
 import type * as binance from "../binance.js";
 import type * as notifications from "../notifications.js";
+import type * as trading from "../trading.js";
 import type * as transactions from "../transactions.js";
+import type * as wallet from "../wallet.js";
 
 import type {
   ApiFromModules,
@@ -23,7 +25,9 @@ declare const fullApi: ApiFromModules<{
   assets: typeof assets;
   binance: typeof binance;
   notifications: typeof notifications;
+  trading: typeof trading;
   transactions: typeof transactions;
+  wallet: typeof wallet;
 }>;
 
 /**
