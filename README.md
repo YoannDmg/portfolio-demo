@@ -26,16 +26,16 @@ Real-time cryptocurrency portfolio management with AI-powered price alerts.
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  FRONTEND (React)                                        │
-│  App.tsx → Hooks (usePrices, useTrading, useStats)      │
+│  App.tsx → Hooks (usePrices, useTrading, useStats)       │
 │          → Components (Cards, Tables, Notifications)     │
 └────────────────────────┬─────────────────────────────────┘
                          │ useQuery / useMutation / useAction
                          ▼
 ┌──────────────────────────────────────────────────────────┐
 │  CONVEX BACKEND                                          │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌───────────────┐  │
-│  │ wallet  │ │ trading │ │ alerts  │ │ notifications │  │
-│  └─────────┘ └─────────┘ └─────────┘ └───────────────┘  │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌───────────────┐   │
+│  │ wallet  │ │ trading │ │ alerts  │ │ notifications │   │
+│  └─────────┘ └─────────┘ └─────────┘ └───────────────┘   │
 │  ┌─────────────────────────────────────────────────────┐ │
 │  │  crons: check-price-alerts (every 5 min)            │ │
 │  └─────────────────────────────────────────────────────┘ │
